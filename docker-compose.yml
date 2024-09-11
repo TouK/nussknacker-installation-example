@@ -5,6 +5,8 @@ services:
   nginx:
     image: nginx:1.26.0-alpine
     restart: unless-stopped
+    networks:
+      - nussknacker-iceberg-net
     ports:
       - 8080:8080
     depends_on:
@@ -27,8 +29,19 @@ services:
   ### Nussknacker designer service
 
   designer:
-    image: touk/nussknacker:${NUSSKNACKER_VERSION:?NUSSKNACKER_VERSION must be defined}_scala-2.12
+    build:
+      context: ./designer/
+      args:
+        NUSSKNACKER_VERSION: ${NUSSKNACKER_VERSION:?NUSSKNACKER_VERSION must be defined}
+        FLINK_VERSION: "1.18.1-scala_2.12-java11"
+        FLINK_VERSION_SHORT: 1.18
+        HADOOP_VERSION: 2.8.3
+        FLINK_HADOOP_VERSION: "2.8.3-10.0"
+        AWS_SDK_VERSION: 2.26.10
+        ICEBERG_VERSION: 1.6.1
     restart: unless-stopped
+    networks:
+      - nussknacker-iceberg-net
     environment:
       CONFIG_FILE: "/opt/nussknacker/conf/application.conf,/opt/nussknacker/conf/application-customizations.conf"
       DB_URL: "jdbc:postgresql://postgres:5432/nu-db"
@@ -41,7 +54,11 @@ services:
       INFLUXDB_URL: "http://influxdb:8086"
       FLINK_REST_URL: "http://flink-jobmanager:8081"
       JDK_JAVA_OPTIONS: "-Xmx1024M"
-      USAGE_REPORTS_SOURCE: "example-installation-docker-compose"
+      USAGE_REPORTS_SOURCE: "iceberg-docker-compose"
+      AWS_ACCESS_KEY_ID: admin
+      AWS_SECRET_ACCESS_KEY: password
+      AWS_REGION: us-east-1
+      AWS_DEFAULT_REGION: us-east-1
     depends_on:
       postgres:
         condition: service_healthy
@@ -71,6 +88,8 @@ services:
   postgres:
     image: postgres:13
     restart: unless-stopped
+    networks:
+      - nussknacker-iceberg-net
     environment:
       POSTGRES_DB: "nu-db"
       POSTGRES_USER: "nu"
@@ -86,11 +105,32 @@ services:
         limits:
           memory: 256M
 
+  postgres-setup:
+    image: postgres:13
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - nussknacker-iceberg-net
+    environment:
+      PGHOST: "postgres"
+      PGDATABASE: "nu-db"
+      PGUSER: "nu"
+      PGPASSWORD: "nupassword"
+      DB: nessie
+      USER: nessie
+      PASSWORD: nessie
+    volumes:
+      - ./postgres/create-db.sh:/create-db.sh
+    entrypoint: ["bash", "/create-db.sh"]
+
   ### Nussknacker metrics-related services:
 
   grafana:
     image: grafana/grafana:10.1.10
     restart: unless-stopped
+    networks:
+      - nussknacker-iceberg-net
     environment:
       GF_AUTH_ANONYMOUS_ENABLED: "true"
       GF_SERVER_ROOT_URL: "%(protocol)s://%(domain)s:/grafana"
@@ -113,6 +153,8 @@ services:
   influxdb:
     image: influxdb:1.8.10
     restart: unless-stopped
+    networks:
+      - nussknacker-iceberg-net
     environment:
       INFLUXDB_DB: "nussknacker_metrics"
     healthcheck:
@@ -129,6 +171,8 @@ services:
   zookeeper:
     image: bitnami/zookeeper:3.9
     restart: unless-stopped
+    networks:
+      - nussknacker-iceberg-net
     environment:
       ALLOW_ANONYMOUS_LOGIN: "yes"
       ZOO_4LW_COMMANDS_WHITELIST: "ruok"
@@ -144,6 +188,8 @@ services:
   kafka:
     image: bitnami/kafka:3.7.0
     restart: unless-stopped
+    networks:
+      - nussknacker-iceberg-net
     hostname: nu-kafka
     environment:
       KAFKA_CFG_ZOOKEEPER_CONNECT: "zookeeper:2181"
@@ -162,6 +208,8 @@ services:
   schema-registry:
     image: bitnami/schema-registry:7.6.1
     restart: unless-stopped
+    networks:
+      - nussknacker-iceberg-net
     environment:
       SCHEMA_REGISTRY_LISTENERS: "http://0.0.0.0:8081"
       SCHEMA_REGISTRY_KAFKA_BROKERS: "PLAINTEXT://kafka:9092"
@@ -180,6 +228,8 @@ services:
   akhq:
     image: tchiotludo/akhq:0.24.0
     restart: unless-stopped
+    networks:
+      - nussknacker-iceberg-net
     environment:
       AKHQ_CONFIGURATION: |
         micronaut:
@@ -211,10 +261,21 @@ services:
       context: ./flink/
       args:
         FLINK_VERSION: "1.18.1-scala_2.12-java11"
+        FLINK_VERSION_SHORT: 1.18
+        HADOOP_VERSION: 2.8.3
+        FLINK_HADOOP_VERSION: "2.8.3-10.0"
+        AWS_SDK_VERSION: 2.26.10
+        ICEBERG_VERSION: 1.6.1
     restart: unless-stopped
+    networks:
+      - nussknacker-iceberg-net
     command: jobmanager
     environment:
       JOB_MANAGER_RPC_ADDRESS: "flink-jobmanager"
+      AWS_ACCESS_KEY_ID: admin
+      AWS_SECRET_ACCESS_KEY: password
+      AWS_REGION: us-east-1
+      AWS_DEFAULT_REGION: us-east-1
     healthcheck:
       test: [ "CMD-SHELL", "curl -f http://localhost:8081/jobs/overview" ]
       interval: 10s
@@ -227,10 +288,21 @@ services:
       context: ./flink/
       args:
         FLINK_VERSION: "1.18.1-scala_2.12-java11"
+        FLINK_VERSION_SHORT: 1.18
+        HADOOP_VERSION: 2.8.3
+        FLINK_HADOOP_VERSION: "2.8.3-10.0"
+        AWS_SDK_VERSION: 2.26.10
+        ICEBERG_VERSION: 1.6.1
     restart: unless-stopped
+    networks:
+      - nussknacker-iceberg-net
     command: taskmanager
     environment:
       JOB_MANAGER_RPC_ADDRESS: "flink-jobmanager"
+      AWS_ACCESS_KEY_ID: admin
+      AWS_SECRET_ACCESS_KEY: password
+      AWS_REGION: us-east-1
+      AWS_DEFAULT_REGION: us-east-1
     depends_on:
       flink-jobmanager:
         condition: service_healthy
@@ -246,6 +318,8 @@ services:
   telegraf:
     image: telegraf:1.30.2
     restart: unless-stopped
+    networks:
+      - nussknacker-iceberg-net
     healthcheck:
       test: [ "CMD-SHELL", "curl -f http://localhost:8087/write" ]
       interval: 10s
@@ -257,8 +331,67 @@ services:
         limits:
           memory: 128M
 
+  minio:
+    image: minio/minio:RELEASE.2024-06-26T01-06-18Z
+    networks:
+      nussknacker-iceberg-net:
+        aliases:
+          - warehouse.minio
+    hostname: minio
+    environment:
+      MINIO_ROOT_USER: admin
+      MINIO_ROOT_PASSWORD: password
+      MINIO_DOMAIN: minio
+      MINIO_REGION_NAME: us-east-1
+      MINIO_REGION: us-east-1
+    ports:
+      - 9001:9001
+      - 9000:9000
+    volumes:
+      - nussknacker_minio_data:/data
+    command: [ "server", "/data", "--console-address", ":9001" ]
+
+  minio-setup:
+    depends_on:
+      - minio
+    image: minio/mc:RELEASE.2024-06-24T19-40-33Z
+    networks:
+      - nussknacker-iceberg-net
+    environment:
+      AWS_ACCESS_KEY_ID: admin
+      AWS_SECRET_ACCESS_KEY: password
+      AWS_REGION: us-east-1
+      AWS_DEFAULT_REGION: us-east-1
+    entrypoint: >
+      /bin/sh -c "
+      until (/usr/bin/mc config host add minio http://minio:9000 admin password) do echo '...waiting...' && sleep 1; done;
+      /usr/bin/mc mb minio/warehouse;
+      /usr/bin/mc policy set public minio/warehouse;
+      tail -f /dev/null
+      "
+
+  nessie:
+    image: projectnessie/nessie:0.76.6
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - nussknacker-iceberg-net
+    ports:
+      - 19120:19120
+    environment:
+      - nessie.version.store.type=JDBC
+      - quarkus.datasource.jdbc.url=jdbc:postgresql://postgres:5432/nessie
+      - quarkus.datasource.username=nessie
+      - quarkus.datasource.password=nessie
+
 volumes:
   nussknacker_designer_data:
     name: nussknacker_designer_data
   nussknacker_flink_data:
     name: nussknacker_flink_data
+  nussknacker_minio_data:
+    name: nussknacker_minio_data
+
+networks:
+  nussknacker-iceberg-net:
