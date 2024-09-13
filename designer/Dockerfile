@@ -21,7 +21,7 @@ RUN curl -L "https://repo.maven.apache.org/maven2/org/apache/flink/flink-shaded-
    -o /opt/nussknacker/lib/flink-shaded-hadoop-2-uber-${FLINK_HADOOP_VERSION}.jar
 
 RUN curl -L "https://repo1.maven.org/maven2/software/amazon/awssdk/bundle/${AWS_SDK_VERSION}/bundle-${AWS_SDK_VERSION}.jar" \
-   -o /opt/nussknacker/components/flink/extra/bundle-${AWS_SDK_VERSION}.jar
+   -o /opt/nussknacker/lib/bundle-${AWS_SDK_VERSION}.jar
 
 RUN chown -R demiourgos728:root /opt/nussknacker
 
