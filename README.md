@@ -1,4 +1,4 @@
-# Nu installation example
+# Nu example integration with Apache Iceberg and Nessie catalog
 
 ## Requirements:
 
@@ -12,9 +12,10 @@
 
 ## Accessing:
 
-- Nu Designer: http://localhost:8080
+- Nu Designer: http://localhost:8080 (admin/admin)
 - Flink console: http://localhost:8080/flink
-- AKHQ console: http://localhost:8080/akhq
+- MinIO console: http://localhost:9001 (admin/password)
+- Nessie console: http://localhost:1912
 
 ## Cleaning up:
 
