@@ -1,0 +1,413 @@
+{
+  "metaData" : {
+    "id" : "iceberg-example",
+    "additionalFields" : {
+      "description" : null,
+      "properties" : {
+        "parallelism" : "1",
+        "spillStateToDisk" : "true",
+        "useAsyncInterpretation" : "",
+        "checkpointIntervalInSeconds" : ""
+      },
+      "metaDataType" : "StreamMetaData",
+      "showDescription" : false
+    }
+  },
+  "nodes" : [
+    {
+      "id" : "order",
+      "ref" : {
+        "typ" : "table",
+        "parameters" : [
+          {
+            "name" : "Table",
+            "expression" : {
+              "language" : "spel",
+              "expression" : "'`_nu_catalog`.`default`.`orders`'"
+            }
+          }
+        ]
+      },
+      "additionalFields" : {
+        "description" : null,
+        "layoutData" : {
+          "x" : 0,
+          "y" : 0
+        }
+      },
+      "type" : "Source"
+    },
+    {
+      "definition" : {
+        "id" : "order",
+        "joinId" : "join item"
+      },
+      "type" : "BranchEndData"
+    }
+  ],
+  "additionalBranches" : [
+    [
+      {
+        "id" : "item",
+        "ref" : {
+          "typ" : "table",
+          "parameters" : [
+            {
+              "name" : "Table",
+              "expression" : {
+                "language" : "spel",
+                "expression" : "'`_nu_catalog`.`default`.`order_items`'"
+              }
+            }
+          ]
+        },
+        "additionalFields" : {
+          "description" : null,
+          "layoutData" : {
+            "x" : 360,
+            "y" : 0
+          }
+        },
+        "type" : "Source"
+      },
+      {
+        "definition" : {
+          "id" : "item",
+          "joinId" : "join item"
+        },
+        "type" : "BranchEndData"
+      }
+    ],
+    [
+      {
+        "id" : "join item",
+        "outputVar" : "item",
+        "nodeType" : "join",
+        "parameters" : [
+          {
+            "name" : "Join Type",
+            "expression" : {
+              "language" : "spel",
+              "expression" : "T(pl.touk.nussknacker.engine.flink.table.join.JoinType).INNER"
+            }
+          },
+          {
+            "name" : "Output",
+            "expression" : {
+              "language" : "spel",
+              "expression" : "#input"
+            }
+          }
+        ],
+        "branchParameters" : [
+          {
+            "branchId" : "order",
+            "parameters" : [
+              {
+                "name" : "Branch Type",
+                "expression" : {
+                  "language" : "spel",
+                  "expression" : "T(pl.touk.nussknacker.engine.flink.util.transformer.join.BranchType).MAIN"
+                }
+              },
+              {
+                "name" : "Key",
+                "expression" : {
+                  "language" : "spel",
+                  "expression" : "#input.id"
+                }
+              }
+            ]
+          },
+          {
+            "branchId" : "item",
+            "parameters" : [
+              {
+                "name" : "Branch Type",
+                "expression" : {
+                  "language" : "spel",
+                  "expression" : "T(pl.touk.nussknacker.engine.flink.util.transformer.join.BranchType).JOINED"
+                }
+              },
+              {
+                "name" : "Key",
+                "expression" : {
+                  "language" : "spel",
+                  "expression" : "#input.order_id"
+                }
+              }
+            ]
+          }
+        ],
+        "additionalFields" : {
+          "description" : null,
+          "layoutData" : {
+            "x" : 180,
+            "y" : 180
+          }
+        },
+        "type" : "Join"
+      },
+      {
+        "definition" : {
+          "id" : "join item",
+          "joinId" : "join product"
+        },
+        "type" : "BranchEndData"
+      }
+    ],
+    [
+      {
+        "id" : "product",
+        "ref" : {
+          "typ" : "table",
+          "parameters" : [
+            {
+              "name" : "Table",
+              "expression" : {
+                "language" : "spel",
+                "expression" : "'`_nu_catalog`.`default`.`products`'"
+              }
+            }
+          ]
+        },
+        "additionalFields" : {
+          "description" : null,
+          "layoutData" : {
+            "x" : 540,
+            "y" : 180
+          }
+        },
+        "type" : "Source"
+      },
+      {
+        "definition" : {
+          "id" : "product",
+          "joinId" : "join product"
+        },
+        "type" : "BranchEndData"
+      }
+    ],
+    [
+      {
+        "id" : "join product",
+        "outputVar" : "product",
+        "nodeType" : "join",
+        "parameters" : [
+          {
+            "name" : "Join Type",
+            "expression" : {
+              "language" : "spel",
+              "expression" : "T(pl.touk.nussknacker.engine.flink.table.join.JoinType).INNER"
+            }
+          },
+          {
+            "name" : "Output",
+            "expression" : {
+              "language" : "spel",
+              "expression" : "#input"
+            }
+          }
+        ],
+        "branchParameters" : [
+          {
+            "branchId" : "join item",
+            "parameters" : [
+              {
+                "name" : "Branch Type",
+                "expression" : {
+                  "language" : "spel",
+                  "expression" : "T(pl.touk.nussknacker.engine.flink.util.transformer.join.BranchType).MAIN"
+                }
+              },
+              {
+                "name" : "Key",
+                "expression" : {
+                  "language" : "spel",
+                  "expression" : "#item.product_id"
+                }
+              }
+            ]
+          },
+          {
+            "branchId" : "product",
+            "parameters" : [
+              {
+                "name" : "Branch Type",
+                "expression" : {
+                  "language" : "spel",
+                  "expression" : "T(pl.touk.nussknacker.engine.flink.util.transformer.join.BranchType).JOINED"
+                }
+              },
+              {
+                "name" : "Key",
+                "expression" : {
+                  "language" : "spel",
+                  "expression" : "#input.id"
+                }
+              }
+            ]
+          }
+        ],
+        "additionalFields" : {
+          "description" : null,
+          "layoutData" : {
+            "x" : 360,
+            "y" : 360
+          }
+        },
+        "type" : "Join"
+      },
+      {
+        "nextFalse" : [
+        ],
+        "id" : "only premium products",
+        "expression" : {
+          "language" : "spel",
+          "expression" : "#product.product_category == 1"
+        },
+        "isDisabled" : null,
+        "additionalFields" : {
+          "description" : null,
+          "layoutData" : {
+            "x" : 360,
+            "y" : 540
+          }
+        },
+        "type" : "Filter"
+      },
+      {
+        "id" : "sum product items quantity",
+        "outputVar" : "productQuantity",
+        "nodeType" : "aggregate",
+        "parameters" : [
+          {
+            "name" : "groupBy",
+            "expression" : {
+              "language" : "spel",
+              "expression" : "#product.id"
+            }
+          },
+          {
+            "name" : "aggregateBy",
+            "expression" : {
+              "language" : "spel",
+              "expression" : "#item.quantity"
+            }
+          },
+          {
+            "name" : "aggregator",
+            "expression" : {
+              "language" : "spel",
+              "expression" : "'Sum'"
+            }
+          }
+        ],
+        "additionalFields" : {
+          "description" : null,
+          "layoutData" : {
+            "x" : 360,
+            "y" : 720
+          }
+        },
+        "type" : "CustomNode"
+      },
+      {
+        "id" : "report meta data",
+        "outputVar" : "reportMeta",
+        "nodeType" : "previousValue",
+        "parameters" : [
+          {
+            "name" : "groupBy",
+            "expression" : {
+              "language" : "spel",
+              "expression" : "\"\""
+            }
+          },
+          {
+            "name" : "value",
+            "expression" : {
+              "language" : "spel",
+              "expression" : "{\n    id: #RANDOM.nextLong(T(java.lang.Long).MAX_VALUE),\n    date: #DATE.nowAtDefaultTimeZone.toLocalDateTime,\n    yearMonth: #DATE_FORMAT.formatter('YYYY-MM').format(#DATE.nowAtDefaultTimeZone)\n}"
+            }
+          }
+        ],
+        "additionalFields" : {
+          "description" : null,
+          "layoutData" : {
+            "x" : 360,
+            "y" : 900
+          }
+        },
+        "type" : "CustomNode"
+      },
+      {
+        "id" : "table",
+        "ref" : {
+          "typ" : "table",
+          "parameters" : [
+            {
+              "name" : "Table",
+              "expression" : {
+                "language" : "spel",
+                "expression" : "'`_nu_catalog`.`default`.`product_orders_report`'"
+              }
+            },
+            {
+              "name" : "Raw editor",
+              "expression" : {
+                "language" : "spel",
+                "expression" : "false"
+              }
+            },
+            {
+              "name" : "report_id",
+              "expression" : {
+                "language" : "spel",
+                "expression" : "#reportMeta.id"
+              }
+            },
+            {
+              "name" : "report_timestamp",
+              "expression" : {
+                "language" : "spel",
+                "expression" : "#reportMeta.date"
+              }
+            },
+            {
+              "name" : "report_year_month",
+              "expression" : {
+                "language" : "spel",
+                "expression" : "#reportMeta.yearMonth"
+              }
+            },
+            {
+              "name" : "product_id",
+              "expression" : {
+                "language" : "spel",
+                "expression" : "#key"
+              }
+            },
+            {
+              "name" : "product_quantity_sum",
+              "expression" : {
+                "language" : "spel",
+                "expression" : "#productQuantity"
+              }
+            }
+          ]
+        },
+        "endResult" : null,
+        "isDisabled" : null,
+        "additionalFields" : {
+          "description" : null,
+          "layoutData" : {
+            "x" : 360,
+            "y" : 1080
+          }
+        },
+        "type" : "Sink"
+      }
+    ]
+  ]
+}
